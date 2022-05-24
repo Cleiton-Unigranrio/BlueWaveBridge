@@ -1,39 +1,51 @@
-import sys
 import pygame
 
+import constants
+from objects.player import Player
+from objects.thrash import Thrash
+from systems.thrash_spawner import ThrashSpawner
+from ui.text import Text
+
 pygame.init()
-screen = pygame.display.set_mode((800, 800))
-background_color = pygame.Color(0, 0, 0)
-
-player = pygame.Rect(0, 0, 50, 50)
-playerVelocity = pygame.Vector2(0)
-playerDirection = pygame.Vector2(0, 0)
-playerColor = pygame.Color(255, 0, 0)
-
-clock = pygame.time.Clock()
+screen = pygame.display.set_mode((constants.WINDOW_WIDTH, constants.WINDOW_HEIGHT))
+background_image = pygame.image.load('assets/images/background/bg.png').convert()
 
 while True:
-    dt = clock.tick(60) / 1000
-    print(playerVelocity)
+    game_over = False
+    player = Player()
+    font = pygame.font.Font('assets/fonts/gamefont.ttf', 24)
+    scoreText = Text('', font)
+    thrashSpawner = ThrashSpawner()
+    score = 0
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_w:
-                playerVelocity += pygame.Vector2((0, -1)) * dt
-            elif event.key == pygame.K_s:
-                playerVelocity += pygame.Vector2((0, 1)) * dt
-            if event.key == pygame.K_a:
-                playerVelocity += pygame.Vector2((-1, 0)) * dt
-            if event.key == pygame.K_d:
-                playerVelocity += pygame.Vector2((1, 0)) * dt
+    clock = pygame.time.Clock()
 
-    if playerVelocity.length() > 0:
-        playerDirection = playerVelocity.normalize()
-        print(playerDirection)
-        player = player.move(playerVelocity * playerDirection)
+    while True:
+        dt = clock.tick(60) / 100
+
+        events = pygame.event.get()
+
+        player.update(dt, events)
+        thrashSpawner.update(dt, events)
+        scoreText.update(f'Score: {score}')
+
+        screen.blit(background_image, (0, 0))
         
-    screen.fill(background_color)
-    pygame.draw.rect(screen, playerColor, player)
-    pygame.display.update()
+        player.draw(screen)
+        thrashSpawner.draw(screen)
+        scoreText.draw(screen, (10, 10))
+
+        if game_over:
+            pygame.time.wait(2000)
+            break
+
+        for event in pygame.event.get():
+            if event.type == constants.GAME_OVER_EVENT:
+                game_over = True
+
+        for thrash in thrashSpawner.thrashes:
+            if thrash.representation.colliderect(player.representation):
+                thrashSpawner.thrashes.remove(thrash)
+                score += 1
+
+        pygame.display.flip()
